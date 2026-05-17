@@ -1,0 +1,27 @@
+[project]
+name = "loopi"
+version = "0.1.0"
+description = "A local AI assistant named Loopi"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp>=0.4.1",
+    "google-genai>=0.2.2",
+    "mcp>=1.2.0",
+    "numpy>=2.1.2",
+    "openai>=1.52.0",
+    "pyaudio>=0.2.14",
+    "python-dotenv>=1.0.1",
+    "sounddevice>=0.5.1",
+    "speechrecognition>=3.14.0",
+    "pygame>=2.6.1",
+    "duckduckgo-search>=6.3.0",
+    "psutil>=6.0.0",
+    "edge-tts>=6.1.12",
+    "beautifulsoup4>=4.12.0",
+    "requests>=2.31.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
