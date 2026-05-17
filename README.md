@@ -1,6 +1,6 @@
-# Loopi-AI (Uppi) 🤖🎙️
+# Loopi-AI 🤖
 
-> *"A high-fidelity, autonomous local AI assistant modeled after Tony Stark's JARVIS, custom built for macOS."*
+> *"A high-fidelity, autonomous local AI assistant modeled from an inspiration of Tony Stark's JARVIS.
 
 **Loopi** is a unified, stateful voice-and-tool agent that runs locally on your Mac. It integrates physical wake triggers, a stateful Gemini-powered brain, and native macOS system controls to act not just as a chatbot, but as an active, agentic doer.
 
@@ -10,7 +10,7 @@
 
 ### 🎙️ 1. Physical Wake Triggers
 Loopi supports two background listening states to conserve API quota and sit unobtrusively in your menu bar or terminal:
-*   **Wake Word**: Responds instantly to `"Hey Loopi"`, `"Da Loopi"`, `"Loopi"`, and vocal variations.
+*   **Wake Word**: Responds instantly to `"Hey Loopi"`,`"Loopi"`, and vocal variations.
 *   **Clap Detection**: Wakes up immediately upon a physical clap (detects transient audio amplitude spikes via numpy analysis).
 
 ### 🗣️ 2. Expressive Speech Engine
