@@ -1,167 +1,135 @@
-# F.R.I.D.A.Y. — Tony Stark Demo
+# Loopi-AI (Uppi) 🤖🎙️
 
-> *"Fully Responsive Intelligent Digital Assistant for You"*
+> *"A high-fidelity, autonomous local AI assistant modeled after Tony Stark's JARVIS, custom built for macOS."*
 
-A Tony Stark-inspired AI assistant split into two cooperating pieces:
-
-| Component | What it is |
-|-----------|-----------|
-| **MCP Server** (`uv run friday`) | A [FastMCP](https://github.com/jlowin/fastmcp) server that exposes tools (news, web search, system info, …) over SSE. Think of it as the Stark Industries backend — it does the actual work. |
-| **Voice Agent** (`uv run friday_voice`) | A [LiveKit Agents](https://github.com/livekit/agents) voice pipeline that listens to your microphone, reasons with an LLM (Gemini 2.5 Flash by default), and speaks back with OpenAI TTS — all while pulling tools from the MCP server in real time. |
-
-Demo: [Instagram reel](https://www.instagram.com/p/DW2HjYtkwg_/)
-
-[![Demo Video Guide](https://img.youtube.com/vi/mMY9swqe3BI/maxresdefault.jpg)](https://www.youtube.com/watch?v=mMY9swqe3BI)
+**Loopi** is a unified, stateful voice-and-tool agent that runs locally on your Mac. It integrates physical wake triggers, a stateful Gemini-powered brain, and native macOS system controls to act not just as a chatbot, but as an active, agentic doer.
 
 ---
 
-## How it works
+## 🌟 Key Features
 
-```
-Microphone ──► STT (Sarvam Saaras v3)
-                    │
-                    ▼
-             LLM (Gemini 2.5 Flash)  ◄──────► MCP Server (FastMCP / SSE)
-                    │                              ├─ get_world_news
-                    ▼                              ├─ open_world_monitor
-             TTS (OpenAI nova)                     ├─ search_web
-                    │                              └─ …more tools
-                    ▼
-             Speaker / LiveKit room
-```
+### 🎙️ 1. Physical Wake Triggers
+Loopi supports two background listening states to conserve API quota and sit unobtrusively in your menu bar or terminal:
+*   **Wake Word**: Responds instantly to `"Hey Loopi"`, `"Da Loopi"`, `"Loopi"`, and vocal variations.
+*   **Clap Detection**: Wakes up immediately upon a physical clap (detects transient audio amplitude spikes via numpy analysis).
 
-The voice agent connects to the MCP server via SSE at `http://127.0.0.1:8000/sse` (auto-resolved to the Windows host IP when running inside WSL).
+### 🗣️ 2. Expressive Speech Engine
+Rather than using static text-to-speech engines, Loopi speaks with real human emotion:
+*   Powered by the **Gemini Live API (`gemini-3.1-flash-live-preview`)**.
+*   Utilizes the premium, highly natural voice model `"Aoede"` to stream real-time expressive audio.
+*   Pipes raw **24kHz Mono 16-bit PCM** audio streams directly to your Mac's hardware speakers using PyAudio.
 
----
+### 🧠 3. Stateful Agentic Brain
+Loopi is built on top of the `gemini-3.1-flash-lite` stateful chat API:
+*   Maintains a persistent, conversational memory during your active sessions.
+*   Natively binds system tools, executing them autonomously or chain-calling them on the fly.
+*   Capable of writing and running temporary python/bash scripts locally to solve problems if a direct tool isn't available.
 
-## Project structure
-
-```
-friday-tony-stark-demo/
-├── server.py           # uv run friday  → starts the MCP server (SSE on :8000)
-├── agent_friday.py     # uv run friday_voice → starts the LiveKit voice agent
-├── pyproject.toml
-├── .env.example        # copy → .env and fill in your keys
-│
-└── friday/             # MCP server package
-    ├── config.py       # env-var loading & app-wide settings
-    ├── tools/          # MCP tools (callable by the LLM)
-    │   ├── web.py      # search_web, fetch_url, get_world_news, open_world_monitor
-    │   ├── system.py   # get_current_time, get_system_info
-    │   └── utils.py    # format_json, word_count
-    ├── prompts/        # MCP prompt templates (summarize, explain_code, …)
-    └── resources/      # MCP resources exposed to clients (friday://info)
-```
+### 💻 4. Deep macOS Integration (Local Tools)
+Loopi has full access to control your Mac through a custom suite of Python and AppleScript tools:
+*   ⚡ **Terminal Action** (`run_command`): Safely executes bash commands on your macOS system.
+*   📂 **File Manager** (`read_file`, `write_file`, `list_directory`): Directly reads, writes, and lists local directories.
+*   📸 **System Actions** (`take_screenshot`, `set_volume`): Sets system volume via AppleScript and captures screenshots directly to your Desktop.
+*   📱 **App Launcher** (`open_application`): Opens any macOS app (e.g., *Safari*, *Spotify*) by name.
+*   🔍 **Yahoo Web Search** (`web_search`): Real-time scraping and HTML parsing via BeautifulSoup4 for live up-to-date facts.
+*   📞 **Smart Contact Book** (`search_contact`, `add_contact`): Manages a local secure [contacts.json](file:///Users/mac/Desktop/Uppi/contacts.json).
+*   ⌨️ **Keyboard Fallback** (`prompt_user_input`): Prompts you in the terminal for text that is hard to dictate verbally (like emails or passwords).
+*   ✉️ **Active Gmail Compose** (`write_to_active_email`): Copies text to clipboard and runs a highly-focused AppleScript to paste text directly into your currently active Gmail tab in Google Chrome, avoiding opening messy new tabs.
 
 ---
 
-## Quick start
+## ⚙️ System Architecture
+
+```
+                                      ┌──────────────────────────────────────┐
+                                      │              User's Mac              │
+                                      └──────────────────┬───────────────────┘
+                                                         │
+                                               [PyAudio Mic Stream]
+                                                         │
+                                                         ▼
+                                       ┌───────────────────────────────────┐
+                       ┌──────────────►│    Background Wake Detector       │
+                       │               └─────────────────┬─────────────────┘
+                       │                                 │
+                 [No Wake Triggered]          [Wake Word / Loud Clap]
+                       │                                 │
+                       └─────────────────────────────────┼─────────────────┐
+                                                         ▼                 ▼
+                                               ┌──────────────────┐  ┌──────────────┐
+                                               │ Google Speech to │  │ PyAudio Live │
+                                               │    Text (STT)    │  │  PCM Stream  │
+                                               └─────────┬────────┘  └──────▲───────┘
+                                                         │                  │
+                                                   [Parsed Text]     [Expressive 24kHz]
+                                                         │              [PCM Bytes]
+                                                         ▼                  │
+                                               ┌──────────────────┐         │
+                                               │   Gemini Lite    │         │
+                                               │ Stateful Chat    │         │
+                                               └─────────┬────────┘         │
+                                                         │                  │
+                                                [Tool Call / Response]      │
+                                                         │                  │
+                                                         ▼                  │
+                                               ┌──────────────────┐  ┌──────┴───────┐
+                                               │ Loopi MCP Tools  │  │ Gemini Live  │
+                                               │ (Mac System APIs)│  │ Voice Model  │
+                                               └──────────────────┘  └──────────────┘
+```
+
+---
+
+## ⚡ Quick Start
 
 ### 1. Prerequisites
+Ensure you are running macOS and have the following installed:
+*   **Python ≥ 3.11**
+*   **PortAudio** (required for `PyAudio` voice capture). Install it via Homebrew:
+    ```bash
+    brew install portaudio
+    ```
+*   **`uv` Package Manager** (highly recommended for fast dependency resolution):
+    ```bash
+    curl -Lsf https://astral.sh/uv/install.sh | sh
+    ```
 
-- Python ≥ 3.11
-- [`uv`](https://github.com/astral-sh/uv) — `pip install uv` or `curl -Lsf https://astral.sh/uv/install.sh | sh`
-- A [LiveKit Cloud](https://cloud.livekit.io) project (free tier works)
-
-### 2. Clone & install
-
+### 2. Setup & Installation
+Clone the repository and sync dependencies:
 ```bash
-git clone https://github.com/SAGAR-TAMANG/friday-tony-stark-demo.git
-cd friday-tony-stark-demo
-uv sync          # creates .venv and installs all dependencies
+git clone https://github.com/Revu1309/Loopi-AI.git
+cd Loopi-AI
+
+# Create virtual environment and install dependencies in seconds using uv
+uv sync
 ```
 
-### 3. Set up environment
-
+### 3. Environment Variables
+Create a local `.env` configuration file from the provided example:
 ```bash
 cp .env.example .env
-# Open .env and fill in your API keys (see the section below)
+```
+Open [.env](file:///Users/mac/Desktop/Uppi/.env) and paste in your Gemini API Key:
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-### 4. Run — two terminals
-
-**Terminal 1 — MCP server** (must start first)
-
+### 4. Running Loopi
+You can start the unified assistant using `uv`:
 ```bash
-uv run friday
+uv run loopi.py
 ```
-
-Starts the FastMCP server on `http://127.0.0.1:8000/sse`. The voice agent connects here to fetch its tools.
-
-**Terminal 2 — Voice agent**
-
-```bash
-uv run friday_voice
-```
-
-Starts the LiveKit voice agent in **dev mode** — it joins a LiveKit room and begins listening. Open the [LiveKit Agents Playground](https://agents-playground.livekit.io) and connect to your room to talk to FRIDAY.
+*   Upon launch, Loopi will ask you to remain quiet for **2 seconds** to calibrate its microphone for your room's ambient noise.
+*   Once calibrated, she will enter **Sleeping Mode**. You can wake her up by saying `"Hey Loopi"` or simply by **clapping your hands**.
 
 ---
 
-## `uv run friday` vs `uv run friday_voice`
-
-| Command | Entry point | What it does |
-|---------|------------|--------------|
-| `uv run friday` | `server.py → main()` | Launches the **FastMCP server** over SSE transport on port 8000. This is the "brain backend" — it registers all tools, prompts, and resources that the LLM can call. |
-| `uv run friday_voice` | `agent_friday.py → dev()` | Launches the **LiveKit voice agent**. It builds the STT / LLM / TTS pipeline, connects to your LiveKit room, and wires up the MCP server as a tool source. The `dev()` wrapper auto-injects the `dev` CLI flag so you don't have to type it manually. |
-
-> Both processes must run **simultaneously**. The voice agent calls the MCP server in real time whenever it needs a tool (e.g. fetching news).
+## 💬 Conversational Guardrails
+To keep interactions quick, snappy, and premium:
+*   Loopi speaks in highly conversational, punchy responses (**under 25 words / 2 sentences max**).
+*   If you ask her for something long (e.g., a codebase explanation, a massive recipe, or directory logs), she will not read it out loud. Instead, she will dynamically compile it into a beautifully formatted text file, save it to your **Desktop**, and open it for you automatically, followed by a quick verbal summary.
 
 ---
 
-## Environment variables
-
-Copy `.env.example` → `.env` and fill in the values below.
-
-| Variable | Required | Where to get it |
-|----------|----------|----------------|
-| `LIVEKIT_URL` | ✅ | [LiveKit Cloud dashboard](https://cloud.livekit.io) → your project URL |
-| `LIVEKIT_API_KEY` | ✅ | LiveKit Cloud → API Keys |
-| `LIVEKIT_API_SECRET` | ✅ | LiveKit Cloud → API Keys |
-| `GROQ_API_KEY` | optional | [console.groq.com](https://console.groq.com) — only needed if you switch `LLM_PROVIDER` to `"groq"` |
-| `SARVAM_API_KEY` | ✅ (default STT) | [dashboard.sarvam.ai](https://dashboard.sarvam.ai) |
-| `OPENAI_API_KEY` | ✅ (default TTS) | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
-| `DEEPGRAM_API_KEY` | optional | [console.deepgram.com](https://console.deepgram.com) |
-| `GOOGLE_APPLICATION_CREDENTIALS` | optional | GCP service-account JSON path — only for `STT_PROVIDER = "google"` |
-| `GOOGLE_API_KEY` | ✅ (default LLM) | [aistudio.google.com](https://aistudio.google.com/projects) |
-| `SUPABASE_URL` | optional | [supabase.com](https://supabase.com) — for the ticketing tool |
-| `SUPABASE_API_KEY` | optional | Supabase project → API settings |
-
----
-
-## Switching providers
-
-Open `agent_friday.py` and change the provider constants at the top:
-
-```python
-STT_PROVIDER = "sarvam"   # "sarvam" | "whisper"
-LLM_PROVIDER = "gemini"   # "gemini" | "openai"
-TTS_PROVIDER = "openai"   # "openai" | "sarvam"
-```
-
----
-
-## Adding a new tool
-
-1. Create or open a file in `friday/tools/`
-2. Define a `register(mcp)` function and decorate tools with `@mcp.tool()`
-3. Import and call `register(mcp)` inside `friday/tools/__init__.py`
-
-The MCP server will pick it up on next start.
-
----
-
-## Tech stack
-
-- **[FastMCP](https://github.com/jlowin/fastmcp)** — MCP server framework
-- **[LiveKit Agents](https://github.com/livekit/agents)** — real-time voice pipeline
-- **Sarvam Saaras v3** — STT (Indian-English optimised)
-- **Google Gemini 2.5 Flash** — LLM
-- **OpenAI TTS** (`nova` voice) — TTS
-- **[uv](https://github.com/astral-sh/uv)** — fast Python package manager
-
----
-
-## License
-
-MIT
+## 📄 License
+This project is licensed under the MIT License.
